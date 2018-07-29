@@ -1,0 +1,10 @@
+﻿{
+   "Name": "PostGifts",
+   "Author": "Annanda Sousa & Felipe Arruda Pontes ",
+   "Version": "1.0.0",
+   "Description": "Post gifts to NPCs using the mail box.",
+   "UniqueID": "ranis.postgifts",
+   "EntryDll": "PostGifts.dll",
+   "MinimumApiVersion": "2.1",
+   "UpdateKeys": []
+}
