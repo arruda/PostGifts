@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
+
 using StardewModdingAPI.Utilities;
 using StardewValley;
 using xTile.Dimensions;
@@ -91,7 +93,7 @@ namespace PostGifts
                     {
                         this.Monitor.Log($"can use mail box.");
 
-                        this.sendGift();
+						this.DisplayFriendSelector();
                     }
                 }
             }
@@ -103,36 +105,86 @@ namespace PostGifts
             //Any();
         }
 
-        private void sendGift()
-        {
-            var npcs = Utility.getAllCharacters();
+		private Dictionary<string, string> getFriendsDict(){
+
+            Dictionary<string, string> friendsIdNames =
+                    new Dictionary<string, string>();
+			
+			var npcs = Utility.getAllCharacters();
 
             foreach (NPC npc in npcs)
             {
                 if (!npc.isVillager())
                     continue;
 
-                this.Monitor.Log($"Character name: {npc.getName()}.");
+				if (!Game1.player.friendshipData.ContainsKey(npc.getName())){
+					continue;
+				}
+                    
+				friendsIdNames.Add(npc.getName(), npc.getName());
 
-                if (!npc.getName().Equals("Linus"))
-                {
-                    continue;
-                }
-                StardewValley.Object fav_object = npc.getFavoriteItem();
-                this.Monitor.Log($"instantiated obj.");
-                if (fav_object is null)
-                {
-                    this.Monitor.Log($"No Favorite Item!.");
+            }
+			return friendsIdNames;
+		}
 
-                }
-                else
-                {
-                    this.Monitor.Log($"Favorite Item: {fav_object.name}.");
-                    npc.receiveGift(fav_object, Game1.player, true, 1, false);
-                    this.Monitor.Log($"Gift '{fav_object.name}' sent from '{Game1.player.Name}' to '{npc.getName()}'.");
-                    break;
-                }
+        private void DisplayFriendSelector()
+        {
+            if (Game1.activeClickableMenu != null) return;
+			List<Response> responseList = new List<Response>();
+			var friendsDict = this.getFriendsDict();
+			foreach (KeyValuePair<string, string> keyValues in friendsDict)
+			{
+				responseList.Add(new Response(keyValues.Key, keyValues.Value));
+            }
+            
+			if (responseList.Count == 0)
+            {
+                return;
+            }
 
+            responseList.Add(new Response("leave", "leave"));
+
+            Game1.currentLocation.createQuestionDialogue(
+				"Select Friend:", responseList.ToArray(), FriendSelectorAnswered, (NPC)null
+			);
+            Game1.player.Halt();
+        }
+
+		private void FriendSelectorAnswered(StardewValley.Farmer farmer, string answer)
+        {
+            if (answer.Equals("leave")) return;
+
+			this.Monitor.Log($"Selected friend: {answer}.");
+			this.sendGift(answer);
+
+
+        }
+
+        private void sendGift(String npcName)
+        {
+            var npcs = Utility.getAllCharacters();
+
+            foreach (NPC npc in npcs)
+            {
+				if (npc.getName().Equals(npcName)){
+                    this.Monitor.Log($"Character name: {npc.getName()}.");
+
+                    StardewValley.Object fav_object = npc.getFavoriteItem();
+                    this.Monitor.Log($"instantiated obj.");
+                    if (fav_object is null)
+                    {
+                        this.Monitor.Log($"No Favorite Item!.");
+                    }
+                    else
+                    {
+                        this.Monitor.Log($"Favorite Item: {fav_object.name}.");
+                        npc.receiveGift(fav_object, Game1.player, true, 1, false);
+                        this.Monitor.Log($"Gift '{fav_object.name}' sent from '{Game1.player.Name}' to '{npc.getName()}'.");
+                        break;
+                    }
+
+				}
+                                         
             }
         }
     }
