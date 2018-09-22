@@ -11,6 +11,7 @@ namespace PostGifts
 {
     public class ModEntry : Mod
     {
+		public int currentPage = 0;
         public override void Entry(IModHelper helper)
         {
             ControlEvents.MouseChanged += this.MouseChanged;
@@ -31,7 +32,7 @@ namespace PostGifts
                 {
                     if (CanUsePostbox())
                     {
-						this.DisplayFriendSelector();
+						this.DisplayFriendSelector(this.currentPage);
                     }
                 }
             }
@@ -72,26 +73,67 @@ namespace PostGifts
 			return friendsIdNames;
 		}
 
-        private void DisplayFriendSelector()
+		private int getTotalFriendsPages(List<Response> allResponses, int maxPerPage){
+			var numberOfPages = allResponses.Count / (maxPerPage + 1);
+			return numberOfPages;
+		}
+
+		private List<Response> getFriendsListPage(List<Response> allResponses, int maxPerPage, int page){
+
+			List<Response> currentPageList = new List<Response>();
+			var numberOfPages = this.getTotalFriendsPages(allResponses, maxPerPage);
+            
+            if (page > numberOfPages)
+			{
+                currentPageList.Add(new Response($"Page 0", $"Page 0"));
+				return currentPageList;
+            }
+			int initialIndex = maxPerPage * page;
+            
+			for (int i = initialIndex; i < initialIndex + maxPerPage; i++)
+			{   
+				if (i < allResponses.Count){
+					currentPageList.Add(allResponses[i]);	
+				}
+				else{
+					break;
+				}
+
+			}
+            if (page < numberOfPages)
+            {
+				currentPageList.Add(new Response($"Page {page + 1}", $"Page {page + 2}"));
+			}
+			else if(page != 0){
+                currentPageList.Add(new Response($"Page 0", $"Page 0"));
+			}
+			return currentPageList;
+		}
+
+        private void DisplayFriendSelector(int page)
         {
+
             if (Game1.activeClickableMenu != null) return;
-			List<Response> responseList = new List<Response>();
+			List<Response> allResponses = new List<Response>();
+			var maxPerPage = 6;
 			var friendsDict = this.getFriendsDict();
 			foreach (KeyValuePair<string, string> keyValues in friendsDict)
 			{
-				responseList.Add(new Response(keyValues.Key, keyValues.Value));
+				allResponses.Add(new Response(keyValues.Key, keyValues.Value));
             }
             
-			if (responseList.Count == 0)
+			if (allResponses.Count == 0)
             {
                 return;
             }
+            
+			List<Response> currentPageList = this.getFriendsListPage(allResponses, maxPerPage, page);
 
-            responseList.Add(new Response("leave", "leave"));
+			currentPageList.Add(new Response("leave", "leave"));
 
             Game1.currentLocation.createQuestionDialogue(
-				"Select Friend:", responseList.ToArray(), FriendSelectorAnswered, (NPC)null
-			);
+                "Select Friend:", currentPageList.ToArray(), FriendSelectorAnswered, (NPC)null
+            );
             Game1.player.Halt();
 		}
 
@@ -103,12 +145,16 @@ namespace PostGifts
 		private void FriendSelectorAnswered(StardewValley.Farmer farmer, string answer)
         {
             if (answer.Equals("leave")) return;
+			if(answer.Contains("Page")){
+				int page = System.Convert.ToInt32(answer.Split(' ')[1]);
+				this.currentPage = page;                
+				return;
+			}
+			else{
+                var items = new List<Item> { null };
+                Game1.activeClickableMenu = new ComposeLetter(this.Monitor, answer, items, 1, 1, null, HighlightOnlyGiftableItems);
 
-
-            var items = new List<Item> { null };
-			Game1.activeClickableMenu = new ComposeLetter(this.Monitor, answer, items, 1, 1, null, HighlightOnlyGiftableItems);
-
-
+			}
         }
     }
 }
