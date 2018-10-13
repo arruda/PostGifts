@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 
@@ -10,12 +11,49 @@ using ranis.SendItems.Menus;
 namespace PostGifts
 {
     public class ModEntry : Mod
-    {
+	{
+        private const string locationOfPostbox = "Farm";
+
 		public int currentPage = 0;
         public override void Entry(IModHelper helper)
-        {
-            ControlEvents.MouseChanged += this.MouseChanged;
+		{
+			//ControlEvents.MouseChanged += this.MouseChanged;
+
+            SaveEvents.AfterLoad += this.AfterSavedGameLoad;
+            SaveEvents.AfterReturnToTitle += this.AfterReturnToTitle;
         }
+
+		private void AfterReturnToTitle(object sender, EventArgs e)
+        {
+            try
+            {
+                ControlEvents.MouseChanged -= MouseChanged;
+                PlayerEvents.Warped -= PlayerWarped;
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void AfterSavedGameLoad(object sender, EventArgs e)
+        {
+            PlayerEvents.Warped += PlayerWarped;
+        }
+
+        private void PlayerWarped(object sender, EventArgsPlayerWarped e)
+        {
+            if (e.NewLocation.Name == locationOfPostbox)
+            {
+                // Only watch for mouse events while at the location of the postbox, for performance
+                ControlEvents.MouseChanged += MouseChanged;
+            }
+            else
+            {
+                ControlEvents.MouseChanged -= MouseChanged;
+            }
+        }
+        
+
 
         private void MouseChanged(object sender, EventArgsMouseStateChanged e)
         {
@@ -27,7 +65,6 @@ namespace PostGifts
             {
                 // Check if the click is on the letterbox tile or the one above it
                 Location tileLocation = new Location((int)Game1.currentCursorTile.X, (int)Game1.currentCursorTile.Y);
-
                 if (tileLocation.X == 68 && (tileLocation.Y >= 15 && tileLocation.Y <= 16))
                 {
                     if (CanUsePostbox())
@@ -43,11 +80,11 @@ namespace PostGifts
             return Game1.mailbox != null && (Game1.mailbox.Count == 0);
         }
 
-		private Dictionary<string, string> getFriendsDict(){
+		private SortedDictionary<string, string> getFriendsDict(){
 
-            Dictionary<string, string> friendsIdNames =
-                    new Dictionary<string, string>();
-			
+			SortedDictionary<string, string> friendsIdNames =
+				new SortedDictionary<string, string>();
+
 			var npcs = Utility.getAllCharacters();
 
             foreach (NPC npc in npcs)
